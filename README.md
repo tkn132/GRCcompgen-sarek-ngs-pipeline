@@ -45,6 +45,21 @@ Finally, the launch.pbs file which will look like the followings:
   nextflow run nf-core/sarek -profile singularity 
 ```
 
+## Step 2: Generate a multi-sample VCF file
+
+After running sarek
+
+
+
+
+
+## Step 3: Functional annotation
+
+
+
+
+
+
 
 
 
