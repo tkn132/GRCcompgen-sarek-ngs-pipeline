@@ -106,7 +106,7 @@ echo -e "CHROM\tPOS\tID\tREF\tALT\tQUAL\tAC\tAN\tAF\t$samples\t$avheaders" > all
 bcftools query -i 'Gene.refGene = "FAT2"' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%AC\t%AN\t%AF\t[\t%TGT]\t%INFO\n' merged_annot.hg38_multianno.vcf | sed 's/\t[^\t]*;Func.refGene/\tFunc.refGene/g' | cut -f1- -d';' | tr -s ';' '\t' | sed 's/\t[^\t]*=/\t/g'  >> all_samples_annovar_FAT2.txt
 ```
 
-
+The file all_samples_annovar_FAT2.txt is attached. You can take a look to get a sense of the expected output. 
 
 
 
