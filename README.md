@@ -14,11 +14,11 @@ For example:
 
 |   |   |   |   |   |   |   |
 | ------- | -- | - | -------- | - | ------------------ | ------------------ |
-| Path083 | xx | 0 | sample01 | 1 | Path083_1.fastq.gz | Path083_2.fastq.gz |
-| Path0187 |	xx | 0 | sample02 | 2 | Path187_1.fastq.gz | Path187_2.fastq.gz |
-| Path248	| xx | 0 | sample03 | 3 | Path248_1.fastq.gz | Path248_2.fastq.gz |
+| Path083 | xx | 0 | sample1 | 1 | Path083_1.fastq.gz | Path083_2.fastq.gz |
+| Path0187 |	xx | 0 | sample2 | 2 | Path187_1.fastq.gz | Path187_2.fastq.gz |
+| Path248	| xx | 0 | sample3 | 3 | Path248_1.fastq.gz | Path248_2.fastq.gz |
 
-Next, make a nextflow.config file containing your custom configurations. In our case, we want to call SNPs and Indels so we are going to use HaplotypeCaller tool. We also want to monitor our run on the nextflow tower so we will add the tower details. 
+Next, make a nextflow.config file containing your custom configurations. In this case, we want to call SNPs and Indels so we are going to use HaplotypeCaller tool. We also want to monitor our run on the nextflow tower so we will add the tower details. 
 
 	params {
 		input = 'sample.tsv'
@@ -31,6 +31,7 @@ Next, make a nextflow.config file containing your custom configurations. In our 
 		enabled = true
 		}
     
+
 Finally, the launch.pbs file which will look like the followings:
 
 ```
@@ -47,19 +48,63 @@ Finally, the launch.pbs file which will look like the followings:
 
 ## Step 2: Generate a multi-sample VCF file
 
-After running sarek
+After running sarek, SNPs and Indels for each sample are stored in per-individual VCF file. We will merge all the VCF files to generate a multi-sample VCF file. 
 
+ - Make a merge list file
 
+```
+for i in {1..11} ; do echo results/VariantCalling/sample$i/HaplotypeCaller/HaplotypeCaller_sample$i.vcf.gz >> file-list.txt; done
+```
 
+ - Merge VCFs
 
+```
+module load bcftools/1.10.2-foss-2019b
+bcftools merge --missing-to-ref --file-list file-list.txt | bcftools +fill-tags -Oz -o merged.vcf.gz 
+tabix -p vcf merged.vcf.gz
+```
 
 ## Step 3: Functional annotation
 
+Now, let's annotate the called variants against common databases:
+ - refGene: gene names, and how the mutations affect the gene structure
+ - avsnp150: rsIDs
+ - dbnsfp33a: a collection of funtional prediction tools (e.g. SIFT, PolyPhen2, MutationAssessor, CADD)
+ - gnomad_genome: gnomAD allele frequencies 
 
+```
+module load perl/5.30.0-gcccore-8.3.0
+anvpath=path/to/the/annovar/directory
 
+perl $anvpath/table_annovar.pl \
+merged.vcf.gz \
+$anvpath/humandb/ \
+-vcfinput \
+-buildver hg38 \
+-out merged_annot \
+-remove \
+-protocol refGene,avsnp150,dbnsfp33a,gnomad_genome \
+-operation g,f,f,f \
+-nastring . \
+-polish
+```
 
+## Step 4: Filter the annotated VCF and make an output TSV
+Suppose we are interested in the FAT2 gene. We will filter this gene and make a final output list of variants with all the relevant info.
 
+ - The headers
 
+```
+samples=`bcftools view -h merged_annot.hg38_multianno.vcf | tail -1 | cut -f10-`
+avheaders=`bcftools query -f'%INFO\n' merged_annot.hg38_multianno.vcf | head -1 | sed 's/.*;Func.refGene/Func.refGene/g' | sed 's/=[^=;]*;/\t/g'`
+echo -e "CHROM\tPOS\tID\tREF\tALT\tQUAL\tAC\tAN\tAF\t$samples\t$avheaders" > all_samples_annovar_FAT2.txt
+```
+
+ - The contents
+
+```
+bcftools query -i 'Gene.refGene = "FAT2"' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QUAL\t%AC\t%AN\t%AF\t[\t%TGT]\t%INFO\n' merged_annot.hg38_multianno.vcf | sed 's/\t[^\t]*;Func.refGene/\tFunc.refGene/g' | cut -f1- -d';' | tr -s ';' '\t' | sed 's/\t[^\t]*=/\t/g'  >> all_samples_annovar_FAT2.txt
+```
 
 
 
