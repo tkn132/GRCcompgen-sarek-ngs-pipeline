@@ -113,7 +113,7 @@ The file all_samples_annovar_FAT2.txt is attached. You can take a look to get a 
 You can add HGMD annotations to your tsv file with R as follows.
 
 ```R
-dat <- read.table('all_samples_annovar_FAT2.txt', header=T,stringsAsFactors =)
+dat <- read.table('all_samples_annovar_FAT2.txt', header=T,stringsAsFactors = F)
 hgmd <- read.table('/work/compgen/data/HGMD/HGMD_Pro_2021.4_hg38.tsv', header=T, fill=TRUE, stringsAsFactors =F)
 
 dat <- merge(dat, hgmd, by=c('CHROM','POS'), all.x=T, suffixes = c("",".HGMD"))
