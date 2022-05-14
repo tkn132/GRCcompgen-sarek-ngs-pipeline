@@ -109,6 +109,17 @@ bcftools query -i 'Gene.refGene = "FAT2"' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%QU
 The file all_samples_annovar_FAT2.txt is attached. You can take a look to get a sense of the expected output. 
 
 
+## (Optional) Step 5. HGMD annotations
+You can add HGMD annotations to your tsv file with R as follows.
 
+```R
+dat <- read.table('all_samples_annovar_FAT2.txt', header=T,stringsAsFactors =)
+hgmd <- read.table('/work/compgen/data/HGMD/HGMD_Pro_2021.4_hg38.tsv', header=T, fill=TRUE, stringsAsFactors =F)
+
+dat <- merge(dat, hgmd, by=c('CHROM','POS'), all.x=T, suffixes = c("",".HGMD"))
+dat[is.na(dat)] <- "."
+
+write.table(dat, 'RLS_all_samples_candidates_HGMD.txt', row.names=F, quote=F)
+```
     
     
